@@ -1,77 +1,54 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html>
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8">
+  <title>廁所通報系統</title>
 
-<title>廁所通報系統</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 
-<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body{
+      font-family:sans-serif;
+      padding:25px;
+      text-align:center;
+      background:#f5f5f5;
+    }
 
-<style>
+    .title{
+      font-size:26px;
+      margin:20px 0;
+      font-weight:bold;
+      line-height:1.6;
+    }
 
-body{
-  font-family:sans-serif;
-  padding:20px;
-  text-align:center;
-  background:#f5f5f5;
-  margin:0;
-}
+    button{
+      width:90%;
+      padding:16px;
+      margin:8px;
+      font-size:20px;
+      border:none;
+      border-radius:12px;
+      background:#06C755;
+      color:white;
+    }
 
-.title{
-  font-size:30px;
-  margin:30px 0;
-  font-weight:bold;
-  line-height:1.7;
-}
+    .back{ background:#888; }
 
-button{
-  width:92%;
-  padding:18px;
-  margin:10px 0;
-  font-size:22px;
-  border:none;
-  border-radius:14px;
-  background:#06C755;
-  color:white;
-  font-weight:bold;
-}
-
-button:active{
-  transform:scale(0.98);
-}
-
-.back{
-  background:#888;
-}
-
-textarea{
-  width:92%;
-  height:120px;
-  margin-top:18px;
-  padding:15px;
-  font-size:18px;
-  border-radius:12px;
-  border:1px solid #ccc;
-  box-sizing:border-box;
-}
-
-.success{
-  padding:80px 20px;
-  font-size:36px;
-  color:#06C755;
-  font-weight:bold;
-}
-
-</style>
+    textarea{
+      width:90%;
+      height:100px;
+      margin-top:15px;
+      padding:12px;
+      font-size:18px;
+      border-radius:10px;
+      border:1px solid #ccc;
+    }
+  </style>
 </head>
 
 <body>
 
-<div class="title" id="location">
-讀取位置中...
-</div>
-
+<div class="title" id="location">讀取中...</div>
 <div id="main"></div>
 
 <script>
@@ -79,127 +56,65 @@ textarea{
 const LIFF_ID = "2009817649-AiEjedLg";
 
 let loc = "";
-let gender = "M";
+let gender = "";
 
 function renderMale(){
-
   document.getElementById("main").innerHTML = `
-  
-    <button onclick="sendMsg('衛生紙不足')">
-      衛生紙不足
-    </button>
+    <button onclick="sendMsg('衛生紙不足')">衛生紙不足</button>
+    <button onclick="sendMsg('酒精不足')">酒精不足</button>
+    <button onclick="sendMsg('洗手乳不足')">洗手乳不足</button>
+    <button onclick="sendMsg('需要清潔')">需要清潔</button>
+    <button onclick="sendMsg('設備故障')">設備故障</button>
 
-    <button onclick="sendMsg('酒精不足')">
-      酒精不足
-    </button>
+    <textarea id="other" placeholder="其他問題"></textarea>
 
-    <button onclick="sendMsg('洗手乳不足')">
-      洗手乳不足
-    </button>
-
-    <button onclick="sendMsg('需要清潔')">
-      需要清潔
-    </button>
-
-    <button onclick="sendMsg('設備故障')">
-      設備故障
-    </button>
-
-    <textarea
-      id="other"
-      placeholder="其他問題（可不填）"
-    ></textarea>
-
-    <button class="back" onclick="sendOther()">
-      送出其他問題
-    </button>
+    <button class="back" onclick="sendOther()">送出其他問題</button>
   `;
 }
 
 function renderFemale(){
-
   document.getElementById("main").innerHTML = `
-  
-    <button onclick="sendMsg('衛生紙不足')">
-      衛生紙不足
-    </button>
+    <button onclick="sendMsg('衛生紙不足')">衛生紙不足</button>
+    <button onclick="sendMsg('酒精不足')">酒精不足</button>
+    <button onclick="sendMsg('洗手乳不足')">洗手乳不足</button>
+    <button onclick="sendMsg('女性生理用品需求')">女性生理用品需求</button>
+    <button onclick="sendMsg('需要清潔')">需要清潔</button>
+    <button onclick="sendMsg('設備故障')">設備故障</button>
 
-    <button onclick="sendMsg('酒精不足')">
-      酒精不足
-    </button>
+    <textarea id="other" placeholder="其他問題"></textarea>
 
-    <button onclick="sendMsg('洗手乳不足')">
-      洗手乳不足
-    </button>
-
-    <button onclick="sendMsg('女性生理用品需求')">
-      女性生理用品需求
-    </button>
-
-    <button onclick="sendMsg('需要清潔')">
-      需要清潔
-    </button>
-
-    <button onclick="sendMsg('設備故障')">
-      設備故障
-    </button>
-
-    <textarea
-      id="other"
-      placeholder="其他問題（可不填）"
-    ></textarea>
-
-    <button class="back" onclick="sendOther()">
-      送出其他問題
-    </button>
+    <button class="back" onclick="sendOther()">送出其他問題</button>
   `;
 }
 
-function renderUI(){
-
-  if(gender === "F"){
-    renderFemale();
-  }else{
-    renderMale();
-  }
+function openUI(){
+  if(gender === "F") renderFemale();
+  else renderMale();
 }
 
 async function main(){
 
-  try{
+  await liff.init({ liffId: LIFF_ID });
 
-    await liff.init({
-      liffId: LIFF_ID
-    });
-
-  }catch(err){
-
-    alert("LIFF 初始化失敗");
+  // 🔥 超重要：不是 LINE 內就直接提示
+  if(!liff.isInClient()){
+    document.body.innerHTML = `
+      <div style="padding:40px;font-size:20px;">
+        ⚠️ 請用 LINE 掃 QR Code 開啟
+      </div>
+    `;
     return;
   }
 
-  const params =
-    new URLSearchParams(window.location.search);
+  const params = new URLSearchParams(window.location.search);
+  loc = params.get("location") || "未指定位置";
 
-  loc = params.get("location");
-
-  if(!loc || loc.trim() === ""){
-    loc = "未指定位置";
-  }
-
-  // 自動判斷男女廁
-  if(
-    loc.includes("女")
-  ){
-    gender = "F";
-  }else{
-    gender = "M";
-  }
+  gender = loc.includes("女") ? "F" : "M";
 
   document.getElementById("location").innerHTML =
-    `目前位置：<br>${loc}`;
+    "目前位置：<br>" + loc;
 
-  renderUI();
+  openUI();
 }
 
 async function sendMsg(type){
@@ -211,38 +126,30 @@ async function sendMsg(type){
 
   try{
 
-    await liff.sendMessages([
-      {
-        type:'text',
-        text:text
-      }
-    ]);
+    await liff.sendMessages([{
+      type: "text",
+      text: text
+    }]);
 
-    document.body.innerHTML =
-      `<div class="success">
+    document.body.innerHTML = `
+      <div style="padding:50px;font-size:30px;color:#06C755;">
         ✅ 已通報成功
-      </div>`;
+      </div>
+    `;
 
-    setTimeout(()=>{
-      liff.closeWindow();
-    },1500);
+    setTimeout(() => liff.closeWindow(), 1200);
 
   }catch(err){
 
-    alert("送出失敗\n" + err);
-
+    alert("送出失敗：\n" + JSON.stringify(err));
   }
 }
 
 function sendOther(){
 
-  const other =
-    document.getElementById("other")
-    .value
-    .trim();
+  const other = document.getElementById("other").value.trim();
 
   if(!other){
-
     alert("請輸入內容");
     return;
   }
@@ -251,11 +158,6 @@ function sendOther(){
 }
 
 main();
-
-</script>
-
-</body>
-</html>
 
 </script>
 
