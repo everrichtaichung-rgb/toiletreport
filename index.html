@@ -1,56 +1,76 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-Hant">
 <head>
-  <meta charset="utf-8">
-  <title>廁所通報系統</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<title>廁所通報系統</title>
 
-  <style>
-    body{
-      font-family:sans-serif;
-      padding:25px;
-      text-align:center;
-      background:#f5f5f5;
-    }
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 
-    .title{
-      font-size:26px;
-      margin:20px 0;
-      font-weight:bold;
-      line-height:1.6;
-    }
+<style>
 
-    button{
-      width:90%;
-      padding:16px;
-      margin:8px;
-      font-size:20px;
-      border:none;
-      border-radius:12px;
-      background:#06C755;
-      color:white;
-    }
+body{
+  font-family:sans-serif;
+  padding:20px;
+  text-align:center;
+  background:#f5f5f5;
+  margin:0;
+}
 
-    .back{
-      background:#888;
-    }
+.title{
+  font-size:30px;
+  margin:30px 0;
+  font-weight:bold;
+  line-height:1.7;
+}
 
-    textarea{
-      width:90%;
-      height:100px;
-      margin-top:15px;
-      padding:12px;
-      font-size:18px;
-      border-radius:10px;
-      border:1px solid #ccc;
-    }
-  </style>
+button{
+  width:92%;
+  padding:18px;
+  margin:10px 0;
+  font-size:22px;
+  border:none;
+  border-radius:14px;
+  background:#06C755;
+  color:white;
+  font-weight:bold;
+}
+
+button:active{
+  transform:scale(0.98);
+}
+
+.back{
+  background:#888;
+}
+
+textarea{
+  width:92%;
+  height:120px;
+  margin-top:18px;
+  padding:15px;
+  font-size:18px;
+  border-radius:12px;
+  border:1px solid #ccc;
+  box-sizing:border-box;
+}
+
+.success{
+  padding:80px 20px;
+  font-size:36px;
+  color:#06C755;
+  font-weight:bold;
+}
+
+</style>
 </head>
 
 <body>
 
-<div class="title" id="location">讀取中...</div>
+<div class="title" id="location">
+讀取位置中...
+</div>
 
 <div id="main"></div>
 
@@ -59,14 +79,19 @@
 const LIFF_ID = "2009817649-AiEjedLg";
 
 let loc = "";
-let gender = ""; // M or F
+let gender = "M";
 
 function renderMale(){
 
   document.getElementById("main").innerHTML = `
-    <button onclick="sendMsg('衛生紙不足')">衛生紙不足</button>
+  
+    <button onclick="sendMsg('衛生紙不足')">
+      衛生紙不足
+    </button>
 
-    <button onclick="sendMsg('酒精不足')">酒精不足</button>
+    <button onclick="sendMsg('酒精不足')">
+      酒精不足
+    </button>
 
     <button onclick="sendMsg('洗手乳不足')">
       洗手乳不足
@@ -80,8 +105,10 @@ function renderMale(){
       設備故障
     </button>
 
-    <textarea id="other"
-      placeholder="其他問題（可不填）"></textarea>
+    <textarea
+      id="other"
+      placeholder="其他問題（可不填）"
+    ></textarea>
 
     <button class="back" onclick="sendOther()">
       送出其他問題
@@ -92,6 +119,7 @@ function renderMale(){
 function renderFemale(){
 
   document.getElementById("main").innerHTML = `
+  
     <button onclick="sendMsg('衛生紙不足')">
       衛生紙不足
     </button>
@@ -116,8 +144,10 @@ function renderFemale(){
       設備故障
     </button>
 
-    <textarea id="other"
-      placeholder="其他問題（可不填）"></textarea>
+    <textarea
+      id="other"
+      placeholder="其他問題（可不填）"
+    ></textarea>
 
     <button class="back" onclick="sendOther()">
       送出其他問題
@@ -125,7 +155,7 @@ function renderFemale(){
   `;
 }
 
-function openSupplies(){
+function renderUI(){
 
   if(gender === "F"){
     renderFemale();
@@ -136,32 +166,40 @@ function openSupplies(){
 
 async function main(){
 
-  await liff.init({
-    liffId: LIFF_ID
-  });
+  try{
+
+    await liff.init({
+      liffId: LIFF_ID
+    });
+
+  }catch(err){
+
+    alert("LIFF 初始化失敗");
+    return;
+  }
 
   const params =
     new URLSearchParams(window.location.search);
 
-  // 改成抓 location
   loc = params.get("location");
 
-  // 防呆
-  if(!loc){
+  if(!loc || loc.trim() === ""){
     loc = "未指定位置";
   }
 
-  // 中文判斷男女廁
-  if(loc.includes("女")){
+  // 自動判斷男女廁
+  if(
+    loc.includes("女")
+  ){
     gender = "F";
   }else{
     gender = "M";
   }
 
   document.getElementById("location").innerHTML =
-    "目前位置：<br>" + loc;
+    `目前位置：<br>${loc}`;
 
-  openSupplies();
+  renderUI();
 }
 
 async function sendMsg(type){
@@ -173,20 +211,17 @@ async function sendMsg(type){
 
   try{
 
-    await liff.sendMessages([{
-      type:'text',
-      text:text
-    }]);
+    await liff.sendMessages([
+      {
+        type:'text',
+        text:text
+      }
+    ]);
 
-    document.body.innerHTML = `
-      <div style="
-        padding:50px;
-        font-size:32px;
-        color:#06C755;
-      ">
+    document.body.innerHTML =
+      `<div class="success">
         ✅ 已通報成功
-      </div>
-    `;
+      </div>`;
 
     setTimeout(()=>{
       liff.closeWindow();
@@ -194,17 +229,20 @@ async function sendMsg(type){
 
   }catch(err){
 
-    alert("送出失敗：" + err);
+    alert("送出失敗\n" + err);
 
   }
 }
 
-async function sendOther(){
+function sendOther(){
 
   const other =
-    document.getElementById("other").value.trim();
+    document.getElementById("other")
+    .value
+    .trim();
 
   if(!other){
+
     alert("請輸入內容");
     return;
   }
@@ -213,6 +251,11 @@ async function sendOther(){
 }
 
 main();
+
+</script>
+
+</body>
+</html>
 
 </script>
 
