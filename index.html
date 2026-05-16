@@ -37,27 +37,11 @@ button{
   font-weight:bold;
 }
 
-.back{
-  background:#888;
-}
-
-textarea{
-  width:92%;
-  height:100px;
-  margin-top:10px;
-  padding:10px;
-}
-
 .success{
-  padding:60px;
-  font-size:30px;
+  padding:40px 20px;
+  font-size:24px;
   color:#06C755;
   font-weight:bold;
-}
-
-.loading{
-  padding:60px;
-  font-size:24px;
 }
 </style>
 </head>
@@ -69,14 +53,10 @@ textarea{
 
 <script>
 
-/* ======================
-   LIFF
-====================== */
+/* ===== LIFF ===== */
 const LIFF_ID = "2009817649-AiEjedLg";
 
-/* ======================
-   Firebase
-====================== */
+/* ===== Firebase ===== */
 const firebaseConfig = {
   apiKey: "AIzaSyCQ89mpw0Em3DQSOAvA_0uwdeCzBYlP5a8",
   authDomain: "toilet-report.firebaseapp.com",
@@ -89,16 +69,12 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-/* ======================
-   變數
-====================== */
+/* ===== 變數 ===== */
 let loc = "";
 let gender = "M";
 let sending = false;
 
-/* ======================
-   UI
-====================== */
+/* ===== UI ===== */
 function render(){
   document.getElementById("main").innerHTML = `
     <button onclick="sendMsg('衛生紙不足')">衛生紙不足</button>
@@ -106,20 +82,14 @@ function render(){
     <button onclick="sendMsg('洗手乳不足')">洗手乳不足</button>
     <button onclick="sendMsg('需要清潔')">需要清潔</button>
     <button onclick="sendMsg('設備故障')">設備故障</button>
-
-    <textarea id="other" placeholder="其他問題"></textarea>
-    <button class="back" onclick="sendOther()">送出其他</button>
   `;
 }
 
-/* ======================
-   初始化
-====================== */
+/* ===== 初始化 ===== */
 async function main(){
 
   await liff.init({ liffId: LIFF_ID });
 
-  /* 🔥 已修正：穩定抓 loc */
   const query = new URLSearchParams(window.location.search);
   const hash = new URLSearchParams(window.location.hash.replace("#","?"));
 
@@ -136,15 +106,13 @@ async function main(){
   render();
 }
 
-/* ======================
-   送出
-====================== */
+/* ===== 送出 ===== */
 async function sendMsg(type){
 
   if(sending) return;
   sending = true;
 
-  document.body.innerHTML = `<div class="loading">送出中...</div>`;
+  document.body.innerHTML = `<div class="success">送出中...</div>`;
 
   try{
 
@@ -160,10 +128,27 @@ async function sendMsg(type){
       text: `【廁所通報】\n位置：${loc}\n問題：${type}`
     }]);
 
-    document.body.innerHTML =
-      `<div class="success">已通報成功</div>`;
+    document.body.innerHTML = `
+      <div class="success">
+        ✅ 已通報成功<br><br>
 
-    setTimeout(()=>liff.closeWindow(),1500);
+        <div style="font-size:18px;color:#333;">
+          我們已收到你的回報
+        </div>
+
+        <br>
+
+        <button onclick="window.location.href='https://line.me/R/ti/p/@607vjgpb'">
+          ➕ 加入官方帳號追蹤進度
+        </button>
+
+        <br>
+
+        <button onclick="location.reload()">
+          🔄 再回報一次
+        </button>
+      </div>
+    `;
 
   }catch(e){
     alert("失敗：" + e.message);
@@ -171,12 +156,6 @@ async function sendMsg(type){
   }
 
   sending = false;
-}
-
-function sendOther(){
-  const t = document.getElementById("other").value.trim();
-  if(!t) return alert("請輸入內容");
-  sendMsg(t);
 }
 
 main();
