@@ -1,49 +1,65 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-Hant">
 <head>
-  <meta charset="utf-8">
-  <title>廁所通報系統</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<title>廁所通報系統</title>
 
-  <style>
-    body{
-      font-family:sans-serif;
-      padding:25px;
-      text-align:center;
-      background:#f5f5f5;
-    }
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
-    .title{
-      font-size:26px;
-      margin:20px 0;
-      font-weight:bold;
-      line-height:1.6;
-    }
+<style>
+body{
+  font-family:sans-serif;
+  padding:20px;
+  text-align:center;
+  background:#f5f5f5;
+  margin:0;
+}
 
-    button{
-      width:90%;
-      padding:16px;
-      margin:8px;
-      font-size:20px;
-      border:none;
-      border-radius:12px;
-      background:#06C755;
-      color:white;
-    }
+.title{
+  font-size:28px;
+  margin:20px 0;
+  font-weight:bold;
+}
 
-    .back{ background:#888; }
+button{
+  width:92%;
+  padding:16px;
+  margin:8px 0;
+  font-size:20px;
+  border:none;
+  border-radius:12px;
+  background:#06C755;
+  color:white;
+  font-weight:bold;
+}
 
-    textarea{
-      width:90%;
-      height:100px;
-      margin-top:15px;
-      padding:12px;
-      font-size:18px;
-      border-radius:10px;
-      border:1px solid #ccc;
-    }
-  </style>
+.back{
+  background:#888;
+}
+
+textarea{
+  width:92%;
+  height:100px;
+  margin-top:10px;
+  padding:10px;
+}
+
+.success{
+  padding:60px;
+  font-size:30px;
+  color:#06C755;
+  font-weight:bold;
+}
+
+.loading{
+  padding:60px;
+  font-size:24px;
+}
+</style>
 </head>
 
 <body>
@@ -53,12 +69,37 @@
 
 <script>
 
+/* ======================
+   LIFF
+====================== */
 const LIFF_ID = "2009817649-AiEjedLg";
 
+/* ======================
+   Firebase
+====================== */
+const firebaseConfig = {
+  apiKey: "AIzaSyCQ89mpw0Em3DQSOAvA_0uwdeCzBYlP5a8",
+  authDomain: "toilet-report.firebaseapp.com",
+  projectId: "toilet-report",
+  storageBucket: "toilet-report.firebasestorage.app",
+  messagingSenderId: "754527820587",
+  appId: "1:754527820587:web:6b7ef45b481fa88edb836e"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+/* ======================
+   變數
+====================== */
 let loc = "";
-let gender = "";
+let gender = "M";
+let sending = false;
 
-function renderMale(){
+/* ======================
+   UI
+====================== */
+function render(){
   document.getElementById("main").innerHTML = `
     <button onclick="sendMsg('衛生紙不足')">衛生紙不足</button>
     <button onclick="sendMsg('酒精不足')">酒精不足</button>
@@ -67,94 +108,75 @@ function renderMale(){
     <button onclick="sendMsg('設備故障')">設備故障</button>
 
     <textarea id="other" placeholder="其他問題"></textarea>
-
-    <button class="back" onclick="sendOther()">送出其他問題</button>
+    <button class="back" onclick="sendOther()">送出其他</button>
   `;
 }
 
-function renderFemale(){
-  document.getElementById("main").innerHTML = `
-    <button onclick="sendMsg('衛生紙不足')">衛生紙不足</button>
-    <button onclick="sendMsg('酒精不足')">酒精不足</button>
-    <button onclick="sendMsg('洗手乳不足')">洗手乳不足</button>
-    <button onclick="sendMsg('女性生理用品需求')">女性生理用品需求</button>
-    <button onclick="sendMsg('需要清潔')">需要清潔</button>
-    <button onclick="sendMsg('設備故障')">設備故障</button>
-
-    <textarea id="other" placeholder="其他問題"></textarea>
-
-    <button class="back" onclick="sendOther()">送出其他問題</button>
-  `;
-}
-
-function openUI(){
-  if(gender === "F") renderFemale();
-  else renderMale();
-}
-
+/* ======================
+   初始化
+====================== */
 async function main(){
 
   await liff.init({ liffId: LIFF_ID });
 
-  // 🔥 超重要：不是 LINE 內就直接提示
-  if(!liff.isInClient()){
-    document.body.innerHTML = `
-      <div style="padding:40px;font-size:20px;">
-        ⚠️ 請用 LINE 掃 QR Code 開啟
-      </div>
-    `;
-    return;
-  }
+  /* 🔥 已修正：穩定抓 loc */
+  const query = new URLSearchParams(window.location.search);
+  const hash = new URLSearchParams(window.location.hash.replace("#","?"));
 
-  const params = new URLSearchParams(window.location.search);
-  loc = params.get("location") || "未指定位置";
+  loc =
+    query.get("loc") ||
+    hash.get("loc") ||
+    "未指定位置";
 
   gender = loc.includes("女") ? "F" : "M";
 
   document.getElementById("location").innerHTML =
     "目前位置：<br>" + loc;
 
-  openUI();
+  render();
 }
 
+/* ======================
+   送出
+====================== */
 async function sendMsg(type){
 
-  const text =
-`【廁所通報】
-位置：${loc}
-問題：${type}`;
+  if(sending) return;
+  sending = true;
+
+  document.body.innerHTML = `<div class="loading">送出中...</div>`;
 
   try{
 
+    await db.collection("reports").add({
+      location: loc,
+      issue: type,
+      gender: gender,
+      time: new Date()
+    });
+
     await liff.sendMessages([{
       type: "text",
-      text: text
+      text: `【廁所通報】\n位置：${loc}\n問題：${type}`
     }]);
 
-    document.body.innerHTML = `
-      <div style="padding:50px;font-size:30px;color:#06C755;">
-        ✅ 已通報成功
-      </div>
-    `;
+    document.body.innerHTML =
+      `<div class="success">已通報成功</div>`;
 
-    setTimeout(() => liff.closeWindow(), 1200);
+    setTimeout(()=>liff.closeWindow(),1500);
 
-  }catch(err){
-
-    alert("送出失敗：\n" + JSON.stringify(err));
+  }catch(e){
+    alert("失敗：" + e.message);
+    location.reload();
   }
+
+  sending = false;
 }
 
 function sendOther(){
-
-  const other = document.getElementById("other").value.trim();
-
-  if(!other){
-    alert("請輸入內容");
-    return;
-  }
-
-  sendMsg(other);
+  const t = document.getElementById("other").value.trim();
+  if(!t) return alert("請輸入內容");
+  sendMsg(t);
 }
 
 main();
